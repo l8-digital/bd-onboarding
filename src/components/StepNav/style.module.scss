@@ -1,0 +1,14 @@
+.nav-steps{
+    @apply flex justify-between gap-2 md:gap-4 relative;
+
+    li{
+
+    }
+
+    &::before{
+        content: '';
+        @apply w-full h-[1px] absolute top-1 z-0;
+        background: rgba(255, 255, 255, 0.1);
+        background: linear-gradient(90deg,rgba(255, 255, 255, 1) 0%, rgb(154, 154, 154) 50%, rgba(255, 255, 255, 1) 100%);
+    }
+}

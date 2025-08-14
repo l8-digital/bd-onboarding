@@ -1,0 +1,31 @@
+.is-loading {
+    color: transparent !important;
+    justify-content: center;
+    align-items: center;
+    cursor: not-allowed;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        height: 26px;
+        width: 26px;
+        color: rgba(179, 176, 176, .6);
+        position: absolute;
+        display: inline-block;
+        border: 3px solid;
+        border-radius: 50%;
+        border-right-color: rgba(179, 176, 176, 0);
+        animation: rotate .75s linear infinite;
+        z-index: 1;
+    }
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

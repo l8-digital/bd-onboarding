@@ -1,0 +1,165 @@
+.cGroup {
+    @apply w-full relative mb-5;
+
+    /* base de input/select */
+    &__input,
+    &__select {
+        @apply w-full rounded-xl border border-neutral/40 text-black focus:border-blue focus-visible:outline-none;
+    }
+
+    /* prefix/suffix container */
+    &__fix {
+        @apply flex;
+    }
+
+    &__fix--prefix {
+        @apply px-4 flex items-center rounded-lg border border-neutral/40 rounded-r-none border-r-0 text-base justify-center disabled:bg-neutral/5 text-neutral/60;
+    }
+
+    &__fix--suffix {
+        @apply px-4 flex items-center rounded-lg border border-neutral/40 rounded-l-none border-l-0 text-base justify-center disabled:bg-neutral/5 text-neutral/60;
+    }
+
+    /* select */
+    &__select {
+        @apply pr-8;
+    }
+
+    &__arrow {
+        @apply absolute top-1/2 -translate-y-1/2 right-3 flex items-center justify-center pointer-events-none w-4 h-4;
+    }
+
+    /* --------- VARIAÇÃO FLOAT --------- */
+    &--float {
+        .cGroup {
+            &__input,
+            &__select {
+                @apply px-4 pt-6 pb-1.5;
+
+                /* sem vírgulas aqui */
+                &:focus + label {
+                    @apply text-xs;
+                    top: 0.5rem;
+                    transform: none;
+                }
+                &:not([value=""]):valid ~ label {
+                    @apply text-xs;
+                    top: 0.5rem;
+                    transform: none;
+                }
+                &:not(:placeholder-shown) ~ label {
+                    @apply text-xs;
+                    top: 0.5rem;
+                    transform: none;
+                }
+            }
+
+            &__select {
+                @apply pr-8;
+
+                &:focus + .cGroup__arrow {
+                    @apply top-6;
+                    transform: none;
+                }
+                &:not([value=""]):valid ~ .cGroup__arrow {
+                    @apply top-6;
+                    transform: none;
+                }
+                &:not(:placeholder-shown) ~ .cGroup__arrow {
+                    @apply top-6;
+                    transform: none;
+                }
+            }
+
+            &__label {
+                @apply pl-4 text-neutral/70 pointer-events-none;
+                position: absolute;
+                top: 50%;
+                left: 0;
+                transform: translateY(-50%);
+                transition: 0.2s ease all;
+            }
+        }
+    }
+
+    /* --------- VARIAÇÃO FIXED --------- */
+    &--fixed {
+        .cGroup {
+            &__input,
+            &__select {
+                @apply px-4 py-3;
+            }
+
+            &__label {
+                @apply pl-2 text-sm text-neutral/70; /* label acima, não flutuante */
+            }
+        }
+    }
+
+    /* --------- ESTADOS (flags no wrapper) --------- */
+
+    /* prefixo presente: tira raio/borda esquerda do input */
+    &.hasPrefix .cGroup__input {
+        @apply rounded-l-none border-l-0;
+    }
+
+    /* sufixo presente: tira raio/borda direita do input */
+    &.hasSuffix .cGroup__input {
+        border-right: none !important;
+        @apply rounded-r-none border-r-0;
+    }
+
+    /* error (no wrapper) */
+    &.hasError {
+
+        .cGroup__input,
+        .cGroup__select {
+            @apply bg-red/5 border-red/70;
+        }
+        .cGroup__fix--prefix,
+        .cGroup__fix--suffix {
+            @apply bg-red/5 border-red/70;
+        }
+    }
+
+    /* disabled (no wrapper) */
+    &.isDisabled {
+
+        .cGroup__input,
+        .cGroup__select {
+            @apply bg-neutral/5 border-neutral/10 cursor-not-allowed;
+        }
+        .cGroup__fix--prefix,
+        .cGroup__fix--suffix {
+            @apply bg-neutral/5 border-neutral/10;
+        }
+    }
+}
+
+/* libs de phone input */
+.PhoneInputInput {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
+.PhoneInput {
+    input:focus-visible {
+        outline: none !important;
+        box-shadow: none !important;
+        border-color: transparent !important;
+    }
+}
+
+/* select customizado */
+.customSelect {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='gray' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+
+    @apply w-full pt-0.5 pb-1.5 border-b border-neutral/30 text-neutral bg-transparent disabled:opacity-70 disabled:cursor-not-allowed focus:border-blue focus-visible:outline-none appearance-none;
+}
