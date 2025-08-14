@@ -5,7 +5,6 @@ import React, {
     forwardRef,
     useImperativeHandle,
 } from "react";
-import {Loader2} from "lucide-react";
 import styles from "../style.module.scss";
 import {AlertMessage} from "../../AlertMessage";
 

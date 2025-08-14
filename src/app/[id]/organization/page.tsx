@@ -16,6 +16,7 @@ import * as yup from 'yup';
 import { Button } from '@/components/Button/Button';
 import { SelectLabel } from '@/components/FormsElements/SelectLabel';
 import ddi from '@/utils/ddi.json';
+import {AddressModal, type Address} from "@/app/[id]/organization/components/AddressModal";
 // import {AddressModal, type Address} from "@/app/[id]/organization/components/AddressModal";
 
 // Tipos originais
@@ -34,6 +35,20 @@ export default function OrganizationPage() {
     const router = useRouter();
     const params = useParams<{ id?: string }>();
     const linkCode = params?.id as string | undefined;
+    // const addresses: Address[] = (data.organization?.addresses ?? []) as Address[];
+    const addresses: readonly Address[] = [
+        {
+            zipcode: '01001000',
+            state: 'SP',
+            city_name: 'São Paulo',
+            line: 'Praça da Sé',
+            building_number: '100',
+            neighborhood: 'Sé',
+        },
+    ];
+
+    const a0: Address | null = addresses[0] ?? null;
+
 
     const [modalOpen, setModalOpen] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -119,15 +134,27 @@ export default function OrganizationPage() {
         }
     };
 
-    const a0 = (payload.addresses?.[0] as Address | undefined) ?? undefined;
-
     const ddiOptions: Option[] = Object.keys(ddi)
         .map((code) => ({ label: `+${code}`, value: `${code}` }))
         .sort((a, b) => Number(a.value) - Number(b.value));
 
+    function handleSave(index: number, addr: Address) {
+        /*const next = [...(data.organization?.addresses ?? [])] as Address[];
+        if (index < next.length) next[index] = addr;
+        else next.push(addr);*/
+
+        console.log('aqui')
+
+        // atualiza o contexto (ou estado local, se preferir)
+       /* updateData('organization', {
+            ...(data.organization ?? {}),
+            addresses: next,
+        } as any);*/
+    }
+
     return (
         <>
-            <section className="pt-24 pb-6">
+            <section className="pt-24 pb-10">
                 <div className="max-w-xl mx-auto">
                     <div className="grid gap-2 mb-8">
                         <img
@@ -249,6 +276,13 @@ export default function OrganizationPage() {
                 </div>
             </section>
 
+            <AddressModal
+                open={modalOpen}
+                index={0}
+                address={a0 ?? null}     // <- passa os dados pelo props
+                onClose={() => setModalOpen(false)}
+                onSave={handleSave}      // <- recebe de volta e salva no contexto
+            />
 
           {/*  <AddressModal
                 open={modalOpen}
