@@ -32,9 +32,9 @@ const addressSchema = yup.object({
 interface AddressModalProps {
     open: boolean;
     index: number;
-    address: Partial<Address> | null;                 // vem por props
+    address: Partial<Address> | null;
     onClose: () => void;
-    onSave: (index: number, address: Address) => void; // devolve para o pai
+    onSave: (index: number, address: Address) => void;
 }
 
 export const AddressModal: React.FC<AddressModalProps> = ({
@@ -44,7 +44,6 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                                                               onClose,
                                                               onSave,
                                                           }) => {
-    // 1) payload preenchido diretamente pelas props (sem useEffect)
     const [payload, setPayload] = useState<AddressForm>({
         zipcode: address?.zipcode ?? '',
         state: address?.state ?? '',
@@ -58,14 +57,12 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     const [loadingCep, setLoadingCep] = useState(false);
     const refs = useRef<Record<string, HTMLInputElement | null>>({});
 
-    // 2) começa bloqueando a busca de CEP; só libera quando o usuário digitar
     const skipCepLookupRef = useRef(true);
 
-    // 3) wrapper pra detectar digitação no CEP e liberar a busca
     const setPayloadSafe = (updater: React.SetStateAction<AddressForm>) => {
         setPayload((prev) => {
-            const next = typeof updater === 'function' ? (updater as (p: AddressForm) => AddressForm)(prev) : updater;
-            // se o usuário alterou o CEP, libera a busca
+            const next =
+                typeof updater === 'function' ? (updater as (p: AddressForm) => AddressForm)(prev) : updater;
             const prevDigits = (prev.zipcode || '').replace(/\D/g, '');
             const nextDigits = (next.zipcode || '').replace(/\D/g, '');
             if (prevDigits !== nextDigits) {
@@ -75,10 +72,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
         });
     };
 
-    // 4) força remount quando o address mudar (reaplica o estado inicial sem useEffect)
     const modalKey = `${index}-${address?.zipcode ?? ''}-${address?.state ?? ''}-${address?.city_name ?? ''}-${address?.line ?? ''}-${address?.building_number ?? ''}-${address?.neighborhood ?? ''}`;
 
-    // 5) Busca CEP (ViaCEP) — só quando DIGITAR (não ao abrir)
     useEffect(() => {
         if (skipCepLookupRef.current) return;
 
@@ -129,6 +124,39 @@ export const AddressModal: React.FC<AddressModalProps> = ({
         return () => clearTimeout(debounce);
     }, [payload.zipcode]);
 
+    // 🔽 AGORA salvamos via clique, sem submit
+    const handleSave = async () => {
+        try {
+            const values = (await addressSchema.validate(payload, { abortEarly: false })) as AddressForm;
+
+            const addressObj: Address = {
+                zipcode: (values.zipcode || '').replace(/\D/g, ''),
+                state: values.state,
+                city_name: values.city_name,
+                line: values.line,
+                building_number: values.building_number,
+                neighborhood: values.neighborhood,
+            };
+
+            onSave(index, addressObj);
+            onClose();
+        } catch (err: any) {
+            const errs: Record<string, string> = {};
+            if (err?.inner) {
+                err.inner.forEach((i: any) => {
+                    if (i.path && !errs[i.path]) errs[i.path] = i.message;
+                });
+            } else if (err?.path) errs[err.path] = err.message;
+            setLocalErrors(errs);
+            const first = Object.keys(errs)[0];
+            if (first)
+                refs.current[first as keyof AddressForm]?.scrollIntoView?.({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+        }
+    };
+
     const statesOptions = (brasil as any[]).map((b: any) => ({ label: b.sigla, value: b.sigla }));
     const citiesOptions = (state: string) => {
         const found = (brasil as any[]).find((b: any) => b.sigla === state);
@@ -139,7 +167,6 @@ export const AddressModal: React.FC<AddressModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            {/* key força remount quando address mudar */}
             <div key={modalKey} className="bg-white rounded-xl w-full max-w-lg">
                 <div className="px-6 pt-3 pb-3 flex items-center justify-between border-b border-black/20">
                     <h2 className="text-xl font-bold">Endereço</h2>
@@ -148,35 +175,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     </button>
                 </div>
 
-                <form onSubmit={(e) => {
-                    e.preventDefault();
-                    (async () => {
-                        try {
-                            const values = (await addressSchema.validate(payload, { abortEarly: false })) as AddressForm;
-                            const addressObj: Address = {
-                                zipcode: (values.zipcode || '').replace(/\D/g, ''),
-                                state: values.state,
-                                city_name: values.city_name,
-                                line: values.line,
-                                building_number: values.building_number,
-                                neighborhood: values.neighborhood,
-                            };
-                            onSave(index, addressObj);
-                            onClose();
-                        } catch (err: any) {
-                            const errs: Record<string, string> = {};
-                            if (err?.inner) {
-                                err.inner.forEach((i: any) => {
-                                    if (i.path && !errs[i.path]) errs[i.path] = i.message;
-                                });
-                            } else if (err?.path) errs[err.path] = err.message;
-                            setLocalErrors(errs);
-                            const first = Object.keys(errs)[0];
-                            if (first) refs.current[first as keyof AddressForm]?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-                        }
-                    })();
-                }} className="grid p-6">
-
+                {/* Mantemos <form> só pra semântica e teclado, mas prevenimos qualquer submit */}
+                <form onSubmit={(e) => e.preventDefault()} noValidate className="grid p-6">
                     <Input
                         id="zipcode"
                         label="CEP"
@@ -195,7 +195,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                         id="line"
                         value={payload.line}
                         setState={setPayloadSafe}
-                        placeholder=""
+                        placeholder="Digite o logradouro"
                         className="uppercase"
                         floating={false}
                         errorExternal={localErrors.line}
@@ -209,7 +209,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                                 id="building_number"
                                 value={payload.building_number}
                                 setState={setPayloadSafe}
-                                placeholder=""
+                                placeholder="Número"
                                 className="uppercase"
                                 floating={false}
                                 errorExternal={localErrors.building_number}
@@ -222,7 +222,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                                 id="neighborhood"
                                 value={payload.neighborhood}
                                 setState={setPayloadSafe}
-                                placeholder=""
+                                placeholder="Digite o bairro"
                                 className="uppercase"
                                 floating={false}
                                 errorExternal={localErrors.neighborhood}
@@ -261,7 +261,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     </div>
 
                     <div className="mt-5">
-                        <Button type="submit" color="primary" fullWidth>
+                        <Button type="button" color="primary" fullWidth onClick={handleSave}>
                             Salvar endereço
                         </Button>
                     </div>

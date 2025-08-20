@@ -11,7 +11,7 @@ const StepNav: React.FC = () => {
 
     const steps = [
         {path: `/${id}/organization`, label: 'Organização'},
-        {path: `/${id}/representative`, label: 'Sócios'},
+        {path: `/${id}/partners`, label: 'Sócios'},
         {path: `/${id}/collaborators`, label: 'Colaboradores'},
         {path: `/${id}/documents`, label: 'Documentos'},
     ];

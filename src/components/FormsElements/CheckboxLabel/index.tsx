@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './../style.module.scss'; // Reutiliza a base de estilo do InputLabel
-import {AlertMessage} from "../../AlertMessage";
+import { AlertMessage } from '../../AlertMessage';
 
 interface CheckboxLabelProps {
     id: string;
@@ -26,7 +26,13 @@ export const CheckboxLabel: React.FC<CheckboxLabelProps> = ({
         if (modifyStateExternal) {
             modifyStateExternal(id, newValue);
         } else if (setState) {
-            setState((prev: any) => ({...prev, [id]: newValue}));
+            // Se for boolean
+            if (typeof value === "boolean") {
+                setState(newValue as any);
+            } else {
+                // Se for objeto
+                setState((prev: any) => ({ ...prev, [id]: newValue }));
+            }
         }
     };
 
@@ -42,14 +48,14 @@ export const CheckboxLabel: React.FC<CheckboxLabelProps> = ({
                 onClick={handleChange}
                 disabled={disabled}
                 className={`w-10 h-5 rounded-full transition-colors relative ${
-                    value ? 'bg-green' : 'bg-neutral/30'
+                    value ? 'bg-primary' : 'bg-gray/50'
                 } ${disabled ? 'opacity-50' : ''}`}
             >
-        <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                value ? 'translate-x-5' : ''
-            }`}
-        />
+                <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        value ? 'translate-x-5' : ''
+                    }`}
+                />
             </button>
 
             {errorExternal && <AlertMessage message={errorExternal} type="error"/>}

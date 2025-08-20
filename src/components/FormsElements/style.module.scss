@@ -72,7 +72,7 @@
             }
 
             &__label {
-                @apply pl-4 text-neutral/70 pointer-events-none;
+                @apply pl-4 text-gray pointer-events-none;
                 position: absolute;
                 top: 50%;
                 left: 0;
@@ -91,7 +91,7 @@
             }
 
             &__label {
-                @apply pl-2 text-sm text-neutral/70; /* label acima, não flutuante */
+                @apply pl-2 text-sm text-gray; /* label acima, não flutuante */
             }
         }
     }

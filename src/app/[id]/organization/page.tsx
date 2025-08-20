@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-// import { useOnboarding } from '@/contexts/OnboardingContext';
 import { isValidCnpj, isValidPhoneBR } from '@/utils/validation';
 import { Input } from '@/components/FormsElements/Input';
 import {
@@ -16,46 +15,31 @@ import * as yup from 'yup';
 import { Button } from '@/components/Button/Button';
 import { SelectLabel } from '@/components/FormsElements/SelectLabel';
 import ddi from '@/utils/ddi.json';
-import {AddressModal, type Address} from "@/app/[id]/organization/components/AddressModal";
-// import {AddressModal, type Address} from "@/app/[id]/organization/components/AddressModal";
+import { type Address, AddressModal } from '@/components/Modals/ModalAddress';
 
-// Tipos originais
-// type RouteParams = { linkCode?: string };
-
-type CompanyData = {
+// --- Tipos ---
+interface CompanyData {
     document: string;
     social_name: string;
     fantasy_name: string | null;
     phone: string;
     email: string;
-};
+}
+
+interface Payload extends CompanyData {
+    ddi: string;
+    addresses: Address[];
+}
+
+type Option = { label: string; value: string };
 
 export default function OrganizationPage() {
-    const [data, updateData ]  = useState([]);
     const router = useRouter();
     const params = useParams<{ id?: string }>();
-    const linkCode = params?.id as string | undefined;
-    // const addresses: Address[] = (data.organization?.addresses ?? []) as Address[];
-    const addresses: readonly Address[] = [
-        {
-            zipcode: '01001000',
-            state: 'SP',
-            city_name: 'São Paulo',
-            line: 'Praça da Sé',
-            building_number: '100',
-            neighborhood: 'Sé',
-        },
-    ];
+    const linkCode = (params?.id as string | undefined) ?? undefined;
 
-    const a0: Address | null = addresses[0] ?? null;
-
-
-    const [modalOpen, setModalOpen] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    type Option = { label: string; value: string };
-
-    const [payload, setPayload] = useState({
+    // --- Estado principal ---
+    const [payload, setPayload] = useState<Payload>({
         document: '',
         social_name: '',
         fantasy_name: '',
@@ -63,21 +47,19 @@ export default function OrganizationPage() {
         phone: '',
         email: '',
         addresses: [],
-        // addresses: (data?.organization?.addresses ?? (data?.organization as any)?.address ?? []) as Address[],
     });
 
- /*   useEffect(() => {
-        setPayload({
-            document: data?.organization?.document || '',
-            social_name: data?.organization?.social_name ?? '',
-            fantasy_name: data?.organization?.fantasy_name ?? '',
-            ddi: data?.organization?.ddi ?? '',
-            phone: data?.organization?.phone ?? '',
-            email: data?.organization?.email ?? '',
-            addresses: (data?.organization?.addresses ?? (data?.organization as any)?.address ?? []) as Address[],
-        });
-    }, [data?.organization]);*/
+    const [modalOpen, setModalOpen] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
+    // Helper: mesmo contrato que seus Inputs esperam (recebe fn(prev) => next)
+    const patchPayload = (fn: (draft: Payload) => Payload) =>
+        setPayload((prev) => fn({ ...prev }));
+
+    // Primeiro endereço (caso exista)
+    const a0: Address | null = payload.addresses?.[0] ?? null;
+
+    // Validação
     const schema = yup.object({
         document: yup
             .string()
@@ -92,32 +74,31 @@ export default function OrganizationPage() {
         email: yup.string().email('E-mail inválido').required('E-mail obrigatório'),
     });
 
-    const to = (path: string) => `/${linkCode ?? ''}/${path}`.replace(/\/+/g, '/');
+    const to = (path: string) => `/${linkCode ?? ''}/${path}`.replace(/\/+\//g, '/');
 
+    // Submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const values: any = (await schema.validate(payload, {
-                abortEarly: false,
-            })) as CompanyData & { addresses: Address[] };
+            const values = (await schema.validate(payload, { abortEarly: false })) as Payload;
 
-            // updateData('organization', values);
+            // Se quiser tornar endereço obrigatório, descomente:
+            // if (!values.addresses?.[0]) {
+            //   setErrors((prev) => ({ ...prev, addresses: 'Endereço obrigatório' }));
+            //   return;
+            // }
+
+            // updateData('organization', values) // <- se usar contexto
             router.push(to('representative'));
         } catch (err: any) {
-            console.error(err);
-
             const next: Record<string, string> = {};
-
             if (err?.inner?.length) {
                 err.inner.forEach((i: any) => {
-                    if (i.path && !next[i.path]) {
-                        next[i.path] = i.message;
-                    }
+                    if (i.path && !next[i.path]) next[i.path] = i.message;
                 });
             } else if (err?.path) {
                 next[err.path] = err.message;
             }
-
             setErrors(next);
 
             const first = Object.keys(next)[0];
@@ -134,22 +115,20 @@ export default function OrganizationPage() {
         }
     };
 
+    // Opções de DDI
     const ddiOptions: Option[] = Object.keys(ddi)
         .map((code) => ({ label: `+${code}`, value: `${code}` }))
         .sort((a, b) => Number(a.value) - Number(b.value));
 
+    // Salvar endereço vindo do modal
     function handleSave(index: number, addr: Address) {
-        /*const next = [...(data.organization?.addresses ?? [])] as Address[];
-        if (index < next.length) next[index] = addr;
-        else next.push(addr);*/
-
-        console.log('aqui')
-
-        // atualiza o contexto (ou estado local, se preferir)
-       /* updateData('organization', {
-            ...(data.organization ?? {}),
-            addresses: next,
-        } as any);*/
+        setPayload((prev) => {
+            const next = [...(prev.addresses ?? [])];
+            if (index < next.length) next[index] = addr;
+            else next.push(addr);
+            return { ...prev, addresses: next };
+        });
+        setModalOpen(false);
     }
 
     return (
@@ -169,14 +148,14 @@ export default function OrganizationPage() {
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="">
+                    <form onSubmit={handleSubmit}>
                         <div className="space-y-6">
                             <Input
                                 id="document"
                                 label="CNPJ"
                                 maskType="document"
                                 value={payload.document}
-                                setState={(fn) => setPayload((prev) => fn({ ...prev }))}
+                                setState={patchPayload}
                                 placeholder=""
                                 disabled
                                 suffix={<BuildingOfficeIcon className="w-5 h-5" />}
@@ -187,9 +166,9 @@ export default function OrganizationPage() {
                                 id="social_name"
                                 label="Razão Social"
                                 value={payload.social_name}
-                                setState={(fn) => setPayload((prev) => fn({ ...prev }))}
+                                setState={patchPayload}
                                 placeholder=""
-                                disabled={true}
+                                disabled
                                 suffix={<UserIcon className="w-5 h-5" />}
                                 errorExternal={errors.social_name}
                             />
@@ -198,7 +177,7 @@ export default function OrganizationPage() {
                                 id="fantasy_name"
                                 label="Nome Fantasia"
                                 value={payload.fantasy_name ?? ''}
-                                setState={(fn) => setPayload((prev) => fn({ ...prev }))}
+                                setState={patchPayload}
                                 placeholder="Nome fantasia"
                                 floating={false}
                                 suffix={<UserIcon className="w-5 h-5" />}
@@ -210,7 +189,7 @@ export default function OrganizationPage() {
                                 label="E-mail"
                                 type="email"
                                 value={payload.email}
-                                setState={setPayload}
+                                setState={patchPayload}
                                 placeholder="empresa@email.com"
                                 suffix={<EnvelopeIcon className="w-5 h-5" />}
                                 floating={false}
@@ -239,7 +218,7 @@ export default function OrganizationPage() {
                                     type="tel"
                                     maskType="phone"
                                     value={payload.phone}
-                                    setState={setPayload}
+                                    setState={patchPayload}
                                     placeholder="(00) 00000-0000"
                                     floating={false}
                                     suffix={<PhoneIcon className="w-5 h-5" />}
@@ -265,6 +244,12 @@ export default function OrganizationPage() {
 
                                 <Button type="button" color="gray" onClick={() => setModalOpen(true)}>
                                     {a0 ? 'Editar' : 'Preencher'}
+                                    {a0 && (
+                                        <span
+                                            aria-hidden
+                                            className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-blue ring-2 ring-white"
+                                        />
+                                    )}
                                 </Button>
                             </div>
                         </div>
@@ -279,17 +264,10 @@ export default function OrganizationPage() {
             <AddressModal
                 open={modalOpen}
                 index={0}
-                address={a0 ?? null}     // <- passa os dados pelo props
+                address={a0}
                 onClose={() => setModalOpen(false)}
-                onSave={handleSave}      // <- recebe de volta e salva no contexto
+                onSave={handleSave}
             />
-
-          {/*  <AddressModal
-                open={modalOpen}
-                index={0}
-                address={(payload.addresses?.[0] as Address) || null}
-                onClose={() => setModalOpen(false)}
-            />*/}
         </>
     );
 }

@@ -50,8 +50,10 @@ export default {
                 dark: '#181818',
             },
             'gray': {
-                light: '#F2F2F2',
-                DEFAULT: '#545454',
+                DEFAULT: 'rgb(117 120 147 / <alpha-value>)',
+                'bw': 'rgb(var(--neutral-bw) / <alpha-value>)',
+                light: '#808080',
+                // DEFAULT: '#9EA1B9',
                 dark: '#2b2b2b',
             },
             'silver': '#707070',
