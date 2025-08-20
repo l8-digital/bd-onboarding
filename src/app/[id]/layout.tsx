@@ -1,17 +1,19 @@
-'use client';
-
 import StepNav from '@/components/StepNav';
-// import { OnboardingProvider } from '@/contexts/OnboardingContext';
+import { OnboardingServerProvider } from '@/contexts/OnboardingServerContext';
+import { getOnboardingLink } from '@/server/onboarding.service';
 import React from 'react';
 
-export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  return (
-      // <OnboardingProvider>
-      <>
-          <StepNav />
+interface LayoutProps {
+    children: React.ReactNode;
+    params: { id: string };
+}
 
-          {children}
-      </>
-      // </OnboardingProvider>
-  );
+export default async function OnboardingLayout({ children, params }: LayoutProps) {
+    const data = await getOnboardingLink(params.id);
+    return (
+        <OnboardingServerProvider value={data}>
+            <StepNav />
+            {children}
+        </OnboardingServerProvider>
+    );
 }

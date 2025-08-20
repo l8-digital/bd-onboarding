@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useOnboarding } from '@/contexts/OnboardingServerContext';
 import { isValidCnpj, isValidPhoneBR } from '@/utils/validation';
 import { Input } from '@/components/FormsElements/Input';
 import {
@@ -38,15 +39,17 @@ export default function OrganizationPage() {
     const params = useParams<{ id?: string }>();
     const linkCode = (params?.id as string | undefined) ?? undefined;
 
+    const { organization } = useOnboarding();
+
     // --- Estado principal ---
     const [payload, setPayload] = useState<Payload>({
-        document: '',
-        social_name: '',
-        fantasy_name: '',
+        document: organization?.document ?? '',
+        social_name: organization?.social_name ?? '',
+        fantasy_name: organization?.fantasy_name ?? '',
         ddi: '',
-        phone: '',
-        email: '',
-        addresses: [],
+        phone: organization?.phone ?? '',
+        email: organization?.email ?? '',
+        addresses: organization?.addresses ?? [],
     });
 
     const [modalOpen, setModalOpen] = useState(false);
