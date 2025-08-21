@@ -10,7 +10,7 @@ import {hasLegalRepresentative, MemberNode} from "@/types/Members";
 import MemberTree from "@/app/[id]/partners/components/MemberTree";
 
 
-export default function OrganizationPageClient({link}: { link: OnboardingLinkApi }) {
+export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) {
     const [openParticipant, setOpenParticipant] = React.useState(false);
     const [errors, setErrors] = React.useState<Record<string, string>>({});
 
