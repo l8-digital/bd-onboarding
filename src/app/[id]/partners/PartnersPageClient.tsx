@@ -2,16 +2,25 @@
 
 import React, {useMemo, useState} from 'react';
 import { Button } from '@/components/Button/Button';
-import Index  from './components/Modals/ModalParticipants';
+import ModalPaticipants from './components/Modals/ModalParticipants';
 import { BuildingOffice2Icon, PencilIcon, PlusIcon } from '@heroicons/react/24/outline';
 import type {OnboardingLinkApi} from "@/server/onboarding.service";
 import {Client} from "@/types/Clients";
 import {hasLegalRepresentative, MemberNode} from "@/types/Members";
 import MemberTree from "@/app/[id]/partners/components/MemberTree";
 
+function replaceMemberNode(tree: MemberNode[], updated: MemberNode): MemberNode[] {
+    return tree.map(n => {
+        if (n.id === updated.id) return { ...n, ...updated };
+        if (n.members?.length) return { ...n, members: replaceMemberNode(n.members, updated) };
+        return n;
+    });
+}
 
 export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) {
     const [openParticipant, setOpenParticipant] = React.useState(false);
+    const [editingMember, setEditingMember] = React.useState<MemberNode | null>(null);
+    const [modalMode, setModalMode] = React.useState<'create' | 'edit'>('create');
     const [errors, setErrors] = React.useState<Record<string, string>>({});
 
     const client = useMemo<Client>(() => ({
@@ -88,13 +97,15 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
     }
 
     const handleEdit = (member: MemberNode) => {
-        // abrir modal de edição do membro selecionado
-        // setEditing(member); setOpenEdit(true);
+        setEditingMember(member);
+        setModalMode('edit');
+        setOpenParticipant(true);
     };
 
     const handleAdd = (parentId: string) => {
-        // abrir modal para adicionar participante ao parentId
-        // setParentId(parentId); setOpenParticipant(true);
+        setEditingMember(null);
+        setModalMode('create');
+        setOpenParticipant(true);
     };
 
 
@@ -237,7 +248,23 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
                 </div>
             </form>
 
-            <Index open={openParticipant} onClose={() => setOpenParticipant(false)} />
+            <ModalPaticipants
+                open={openParticipant}
+                mode={modalMode}
+                initialData={editingMember ?? undefined}
+                lockType={modalMode === 'edit'}
+                onClose={() => {
+                    setOpenParticipant(false);
+                    setEditingMember(null);
+                    setModalMode('create');
+                }}
+                onSaved={(updated) => {
+                    setMembers(prev => replaceMemberNode(prev, updated));
+                    setOpenParticipant(false);
+                    setEditingMember(null);
+                    setModalMode('create');
+                }}
+            />
         </main>
     );
 }
