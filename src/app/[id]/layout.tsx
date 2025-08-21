@@ -1,7 +1,8 @@
 import StepNav from '@/components/StepNav';
-import { OnboardingServerProvider } from '@/contexts/OnboardingServerContext';
-import { getOnboardingLink } from '@/server/onboarding.service';
 import React from 'react';
+import {
+    getOnboardingLink, type OnboardingLinkApi,
+} from '@/server/onboarding.service';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -9,11 +10,19 @@ interface LayoutProps {
 }
 
 export default async function OnboardingLayout({ children, params }: LayoutProps) {
-    const data = await getOnboardingLink(params.id);
+    const link: OnboardingLinkApi = await getOnboardingLink(params.id);
+
+    console.log(link);
+
     return (
-        <OnboardingServerProvider value={data}>
+        <>
             <StepNav />
-            {children}
-        </OnboardingServerProvider>
+            {React.isValidElement(children)
+                ? React.cloneElement(
+                    children as React.ReactElement<{ link?: OnboardingLinkApi }>,
+                    { link }
+                )
+                : children}
+        </>
     );
 }

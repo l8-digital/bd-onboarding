@@ -1,3 +1,3 @@
 import { env } from '@/lib/env';
 
-export const authApi = env.API_URL;
+export const authApi = process.env.NEXT_PUBLIC_API_URL;

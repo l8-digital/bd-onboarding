@@ -21,10 +21,11 @@ interface ButtonProps {
     href?: string;
     className?: string;
     onClick?: (e: React.MouseEvent) => void;
-    children: React.ReactNode;
+    children?: React.ReactNode;
     iconLeft?: React.ReactNode;
     iconRight?: React.ReactNode;
     fullWidth?: boolean;
+    iconOnly?: boolean;
     target?: '_blank' | '_self' | '_parent' | '_top';
     rel?: string;
     prefetch?: boolean; // Next.js Link prop (opcional)
@@ -33,7 +34,7 @@ interface ButtonProps {
 const sizeClasses = {
     xs: 'text-xs px-2.5 py-1.5 leading-none',
     sm: 'text-sm px-4 py-2.5 leading-none',
-    md: 'text-[15px] px-3 md:px-5 py-3',
+    md: 'text-[15px] px-3 md:px-5 py-2.5',
     lg: 'text-lg px-7 py-2.5',
 };
 
@@ -88,6 +89,13 @@ const loadingSpinnerClasses: Record<string, string> = {
     'link-blue': 'border-blue',
 };
 
+const iconOnlySizeClasses = {
+    xs: "w-6 h-6",   // 24px
+    sm: "w-8 h-8",   // 32px
+    md: "w-10 h-10", // 40px
+    lg: "w-12 h-12", // 48px
+};
+
 export const Button: React.FC<ButtonProps> = ({
                                                   type = 'button',
                                                   size = 'md',
@@ -104,6 +112,7 @@ export const Button: React.FC<ButtonProps> = ({
                                                   target,
                                                   rel,
                                                   prefetch,
+                                                  iconOnly
                                               }) => {
     const baseClass =
         'flex items-center justify-center whitespace-nowrap rounded-full font-medium text-center focus:outline-none transition font-secondary relative z-0';
@@ -117,11 +126,13 @@ export const Button: React.FC<ButtonProps> = ({
         loadingSpinnerClasses[color] || 'border-black'
     );
 
-    const spinner = loading && <span className={spinnerClass} />;
+    const spinner = loading && <span className={spinnerClass}/>;
 
     const composedClasses = classNames(
         baseClass,
-        sizeClasses[size],
+        iconOnly
+            ? iconOnlySizeClasses[size]
+            : sizeClasses[size],
         colorClasses[color],
         isLoading,
         isDisabled,
@@ -132,11 +143,11 @@ export const Button: React.FC<ButtonProps> = ({
     const content = (
         <>
             {spinner}
-            <span className={loading ? 'invisible' : 'flex items-center gap-2'}>
-        {iconLeft && <span>{iconLeft}</span>}
-                {children}
+            <span className={loading ? "invisible" : "flex items-center justify-center"}>
+      {iconLeft && <span>{iconLeft}</span>}
+                {!iconOnly && children}
                 {iconRight && <span>{iconRight}</span>}
-      </span>
+    </span>
         </>
     );
 
@@ -154,7 +165,8 @@ export const Button: React.FC<ButtonProps> = ({
 
         if (isExternal) {
             return (
-                <a href={href} target={target} rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)} {...commonProps}>
+                <a href={href} target={target}
+                   rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)} {...commonProps}>
                     {content}
                 </a>
             );

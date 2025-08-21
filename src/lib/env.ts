@@ -19,9 +19,6 @@ const envSchema = yup.object({
         .string()
         .default("http://localhost:3000")
         .test("is-url", "NEXTAUTH_URL must be a valid URL", isUrl),
-    NEXTAUTH_SECRET: yup
-        .string()
-        .required("NEXTAUTH_SECRET is required"),
     API_URL: yup
         .string()
         .default("http://localhost:3333")
@@ -30,7 +27,6 @@ const envSchema = yup.object({
 
 const envVars = envSchema.validateSync({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     API_URL: process.env.API_URL,
 });
 

@@ -14,34 +14,14 @@ import {
 } from "@heroicons/react/24/outline";
 import {CheckboxLabel} from "@/components/FormsElements/CheckboxLabel";
 import {useState} from "react";
-import {type Address, AddressModal} from "@/components/Modals/ModalAddress";
+import {Address} from "@/components/Address";
 import {UploadFile} from "@/components/FormsElements/UploadFile";
 
 // import { schemaPJ } from '../schemas/pj';
 // import { savePJ } from '@/app/_actions/participants/pj';
-const addresses: readonly Address[] = [
-    {
-        zipcode: '01001000',
-        state: 'SP',
-        city_name: 'São Paulo',
-        line: 'Praça da Sé',
-        building_number: '100',
-        neighborhood: 'Sé',
-    },
-];
+
 
 export default function FormPF({onSuccess}: { onSuccess: () => void }) {
-
-    const addresses: readonly Address[] = [
-        {
-            zipcode: '',
-            state: '',
-            city_name: '',
-            line: '',
-            building_number: '',
-            neighborhood: '',
-        },
-    ];
 
     const [payload, setPayload] = React.useState({
         corporate_name: '',
@@ -61,39 +41,10 @@ export default function FormPF({onSuccess}: { onSuccess: () => void }) {
     const [modalOpen, setModalOpen] = useState(false);
 
 
-    const a0: Address | null = addresses[0] ?? null;
 
-    function handleSave(index: number, addr: Address) {
-        /*const next = [...(data.organization?.addresses ?? [])] as Address[];
-        if (index < next.length) next[index] = addr;
-        else next.push(addr);*/
-
-        // atualiza o contexto (ou estado local, se preferir)
-        /* updateData('organization', {
-             ...(data.organization ?? {}),
-             addresses: next,
-         } as any);*/
-    }
-    /*
-        async function onSubmit(e: React.FormEvent) {
-            e.preventDefault();
-            setErrors({});
-            try {
-                const valid = await schemaPJ.validate(payload, { abortEarly: false });
-                startTransition(async () => {
-                    await savePJ(valid); // endpoint PJ
-                    onSuccess();
-                });
-            } catch (err: any) {
-                const next: Record<string, string> = {};
-                err?.inner?.forEach((i: any) => { if (i.path && !next[i.path]) next[i.path] = i.message; });
-                if (err?.path) next[err.path] = err.message;
-                setErrors(next);
-            }
-        }*/
 
     return (
-        <form className="py-6">
+        <div className="py-6">
 
             <h2 className="text-neutral mb-3">Informações Gerais</h2>
 
@@ -154,7 +105,11 @@ export default function FormPF({onSuccess}: { onSuccess: () => void }) {
 
             <h2 className="text-neutral mb-3 mt-6">Endereço</h2>
 
-            <div className="w-full mt-3">
+            <Address
+                addresses={payload.addresses}
+                onChange={(next: any) => setPayload(prev => ({ ...prev, addresses: next }))}
+            />
+            {/*<div className="w-full mt-3">
                 <h2 className="text-xs text-neutral/70 mb-1 pl-9">Endereço</h2>
 
                 <div className="flex items-center justify-between gap-4">
@@ -183,7 +138,7 @@ export default function FormPF({onSuccess}: { onSuccess: () => void }) {
                         </Button>
                     </div>
                 </div>
-            </div>
+            </div>*/}
 
             <h2 className="text-neutral mb-3 mt-4">Documentos</h2>
 
@@ -197,7 +152,7 @@ export default function FormPF({onSuccess}: { onSuccess: () => void }) {
                 errorExternal={errors?.occupation}
             />
 
-            <UploadFile
+            {/*<UploadFile
                 id="frente_doc"
                 label="Frente do documento"
                 hint="JPG ou PNG"
@@ -205,7 +160,7 @@ export default function FormPF({onSuccess}: { onSuccess: () => void }) {
                 value={payload.frente_doc ?? null}
                 setState={setPayload}                // armazena em payload.frente_doc
                 maxSizeMB={10}
-            />
+            />*/}
 
             <div className="mt-6">
                 <Button type="submit" color="primary" fullWidth
@@ -213,15 +168,6 @@ export default function FormPF({onSuccess}: { onSuccess: () => void }) {
                     Adicionar Sócio
                 </Button>
             </div>
-
-            <AddressModal
-                open={modalOpen}
-                index={0}
-                address={a0 ?? null}     // <- passa os dados pelo props
-                onClose={() => setModalOpen(false)}
-                onSave={handleSave}      // <- recebe de volta e salva no contexto
-            />
-
-        </form>
+        </div>
     );
 }

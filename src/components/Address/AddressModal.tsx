@@ -9,32 +9,58 @@ import { Button } from '@/components/Button/Button';
 import brasil from '@/utils/brasil.json';
 import { ArrowPathIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-export type Address = {
-    zipcode: string;
-    state: string;
-    city_name?: string;
-    line: string;
-    building_number: string;
-    neighborhood: string;
-};
+// helpers de normalização
+const digits = (v?: string | null) => (v ?? '').replace(/\D/g, '');
+const upper  = (v?: string | null) => (v ?? '').toString().trim().toUpperCase();
 
-type AddressForm = Address;
+// schema com transforms para já devolver os dados prontos
+const addressSchema = yup
+    .object({
+        zipcode: yup
+            .string()
+            .transform(digits)
+            .required('CEP obrigatório')
+            .length(8, 'CEP inválido'),
 
-const addressSchema = yup.object({
-    zipcode: yup.string().required('CEP obrigatório'),
-    state: yup.string().required('Estado obrigatório'),
-    city_name: yup.string().required('Cidade obrigatória'),
-    line: yup.string().required('Logradouro obrigatório'),
-    building_number: yup.string().required('Número obrigatório'),
-    neighborhood: yup.string().required('Bairro obrigatório'),
-});
+        state_uf: yup
+            .string()
+            .transform(upper)
+            .required('Estado obrigatório')
+            .length(2, 'UF deve ter 2 letras'),
+
+        city_name: yup
+            .string()
+            .transform(upper)
+            .required('Cidade obrigatória'),
+
+        line: yup
+            .string()
+            .transform(upper)
+            .required('Logradouro obrigatório'),
+
+        building_number: yup
+            .string()
+            .transform(v => (v == null ? '' : String(v).trim()))
+            .required('Número obrigatório'),
+
+        neighborhood: yup
+            .string()
+            .transform(upper)
+            .required('Bairro obrigatório'),
+    })
+    .noUnknown(true);
+
+export type Address = yup.InferType<typeof addressSchema>; // { zipcode, state_uf, city_name, line, building_number, neighborhood }
+
+type AddressPayload = Address;
+type AddressKeys = keyof AddressPayload;
 
 interface AddressModalProps {
     open: boolean;
     index: number;
-    address: Partial<Address> | null;
+    address: Address | null;
     onClose: () => void;
-    onSave: (index: number, address: Address) => void;
+    onChange: (index: number, address: Address) => void; // <- callback final
 }
 
 export const AddressModal: React.FC<AddressModalProps> = ({
@@ -42,11 +68,11 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                                                               index,
                                                               address,
                                                               onClose,
-                                                              onSave,
+                                                              onChange,
                                                           }) => {
-    const [payload, setPayload] = useState<AddressForm>({
+    const [payload, setPayload] = useState<AddressPayload>({
         zipcode: address?.zipcode ?? '',
-        state: address?.state ?? '',
+        state_uf: address?.state_uf ?? '',
         city_name: address?.city_name ?? '',
         line: address?.line ?? '',
         building_number: address?.building_number ?? '',
@@ -55,30 +81,42 @@ export const AddressModal: React.FC<AddressModalProps> = ({
 
     const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
     const [loadingCep, setLoadingCep] = useState(false);
-    const refs = useRef<Record<string, HTMLInputElement | null>>({});
+
+    // SelectLabel não é input; use HTMLElement | null
+    const refs = useRef<Record<AddressKeys, HTMLElement | null>>({
+        zipcode: null,
+        state_uf: null,
+        city_name: null,
+        line: null,
+        building_number: null,
+        neighborhood: null,
+    });
 
     const skipCepLookupRef = useRef(true);
 
-    const setPayloadSafe = (updater: React.SetStateAction<AddressForm>) => {
-        setPayload((prev) => {
-            const next =
-                typeof updater === 'function' ? (updater as (p: AddressForm) => AddressForm)(prev) : updater;
-            const prevDigits = (prev.zipcode || '').replace(/\D/g, '');
-            const nextDigits = (next.zipcode || '').replace(/\D/g, '');
+    const setPayloadSafe = (updater: React.SetStateAction<AddressPayload>) => {
+        setPayload(prev => {
+            const next = typeof updater === 'function'
+                ? (updater as (p: AddressPayload) => AddressPayload)(prev)
+                : updater;
+
+            const prevDigits = digits(prev.zipcode);
+            const nextDigits = digits(next.zipcode);
             if (prevDigits !== nextDigits) {
-                skipCepLookupRef.current = false;
+                skipCepLookupRef.current = false; // habilita busca por CEP
             }
             return next;
         });
     };
 
-    const modalKey = `${index}-${address?.zipcode ?? ''}-${address?.state ?? ''}-${address?.city_name ?? ''}-${address?.line ?? ''}-${address?.building_number ?? ''}-${address?.neighborhood ?? ''}`;
+    const modalKey = `${index}-${address?.zipcode ?? ''}-${address?.state_uf ?? ''}-${address?.city_name ?? ''}-${address?.line ?? ''}-${address?.building_number ?? ''}-${address?.neighborhood ?? ''}`;
 
+    // auto-preenchimento via ViaCEP quando o CEP completa 8 dígitos
     useEffect(() => {
         if (skipCepLookupRef.current) return;
 
-        const cepLimpo = (payload.zipcode || '').replace(/\D/g, '');
-        setLocalErrors((prev) => ({ ...prev, zipcode: '' }));
+        const cepLimpo = digits(payload.zipcode);
+        setLocalErrors(prev => ({ ...prev, zipcode: '' }));
 
         if (cepLimpo.length !== 8) {
             setLoadingCep(false);
@@ -89,33 +127,33 @@ export const AddressModal: React.FC<AddressModalProps> = ({
             setLoadingCep(true);
 
             fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-                .then((res) => res.json())
-                .then((data) => {
+                .then(res => res.json())
+                .then(data => {
                     if (data.erro) throw new Error('CEP não encontrado');
 
-                    setPayload((prev) => ({
+                    setPayload(prev => ({
                         ...prev,
-                        line: data.logradouro || '',
-                        neighborhood: data.bairro || '',
-                        state: data.uf || '',
-                        city_name: data.localidade || '',
+                        line: (data.logradouro || '').toString().toUpperCase(),
+                        neighborhood: (data.bairro || '').toString().toUpperCase(),
+                        state_uf: (data.uf || '').toString().toUpperCase(),
+                        city_name: (data.localidade || '').toString().toUpperCase(),
                     }));
 
                     setLoadingCep(false);
 
                     setTimeout(() => {
-                        if (!data.logradouro) refs.current['line']?.focus();
-                        else refs.current['building_number']?.focus();
+                        if (!data.logradouro) (refs.current.line as any)?.focus?.();
+                        else (refs.current.building_number as any)?.focus?.();
                     }, 100);
                 })
                 .catch(() => {
                     setLoadingCep(false);
-                    setLocalErrors((prev) => ({ ...prev, zipcode: 'CEP não encontrado' }));
-                    setPayload((prev) => ({
+                    setLocalErrors(prev => ({ ...prev, zipcode: 'CEP não encontrado' }));
+                    setPayload(prev => ({
                         ...prev,
                         line: '',
                         neighborhood: '',
-                        state: '',
+                        state_uf: '',
                         city_name: '',
                     }));
                 });
@@ -124,21 +162,13 @@ export const AddressModal: React.FC<AddressModalProps> = ({
         return () => clearTimeout(debounce);
     }, [payload.zipcode]);
 
-    // 🔽 AGORA salvamos via clique, sem submit
     const handleSave = async () => {
         try {
-            const values = (await addressSchema.validate(payload, { abortEarly: false })) as AddressForm;
+            const address = await addressSchema.validate(payload, {
+                abortEarly: false,
+            });
 
-            const addressObj: Address = {
-                zipcode: (values.zipcode || '').replace(/\D/g, ''),
-                state: values.state,
-                city_name: values.city_name,
-                line: values.line,
-                building_number: values.building_number,
-                neighborhood: values.neighborhood,
-            };
-
-            onSave(index, addressObj);
+            onChange(index, address); // <- devolve pronto
             onClose();
         } catch (err: any) {
             const errs: Record<string, string> = {};
@@ -146,20 +176,23 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 err.inner.forEach((i: any) => {
                     if (i.path && !errs[i.path]) errs[i.path] = i.message;
                 });
-            } else if (err?.path) errs[err.path] = err.message;
+            } else if (err?.path) {
+                errs[err.path] = err.message;
+            }
+
             setLocalErrors(errs);
-            const first = Object.keys(errs)[0];
-            if (first)
-                refs.current[first as keyof AddressForm]?.scrollIntoView?.({
-                    behavior: 'smooth',
-                    block: 'center',
-                });
+
+            const first = Object.keys(errs)[0] as AddressKeys | undefined;
+            if (first) {
+                (refs.current[first] as any)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+            }
         }
     };
 
     const statesOptions = (brasil as any[]).map((b: any) => ({ label: b.sigla, value: b.sigla }));
-    const citiesOptions = (state: string) => {
-        const found = (brasil as any[]).find((b: any) => b.sigla === state);
+
+    const citiesOptions = (uf: string) => {
+        const found = (brasil as any[]).find((b: any) => b.sigla === uf);
         return found ? found.cidades.map((c: string) => ({ label: c, value: c })) : [];
     };
 
@@ -175,8 +208,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     </button>
                 </div>
 
-                {/* Mantemos <form> só pra semântica e teclado, mas prevenimos qualquer submit */}
-                <form onSubmit={(e) => e.preventDefault()} noValidate className="grid p-6">
+                <div className="grid p-6">
                     <Input
                         id="zipcode"
                         label="CEP"
@@ -185,7 +217,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                         autoComplete="postal-code"
                         setState={setPayloadSafe}
                         value={payload.zipcode}
-                        ref={(el: any) => (refs.current['zipcode'] = el)}
+                        ref={(el: any) => (refs.current.zipcode = el)}
                         suffix={<ArrowPathIcon className={`w-4 h-4 transition ${loadingCep ? 'animate-spin' : 'hidden'}`} />}
                         errorExternal={localErrors.zipcode}
                     />
@@ -199,7 +231,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                         className="uppercase"
                         floating={false}
                         errorExternal={localErrors.line}
-                        ref={(el: any) => (refs.current['line'] = el)}
+                        ref={(el: any) => (refs.current.line = el)}
                     />
 
                     <div className="flex gap-3">
@@ -213,7 +245,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                                 className="uppercase"
                                 floating={false}
                                 errorExternal={localErrors.building_number}
-                                ref={(el: any) => (refs.current['building_number'] = el)}
+                                ref={(el: any) => (refs.current.building_number = el)}
                             />
                         </div>
                         <div className="w-8/12">
@@ -226,36 +258,36 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                                 className="uppercase"
                                 floating={false}
                                 errorExternal={localErrors.neighborhood}
-                                ref={(el: any) => (refs.current['neighborhood'] = el)}
+                                ref={(el: any) => (refs.current.neighborhood = el)}
                             />
                         </div>
                     </div>
 
                     <div className="flex gap-3">
+                        <div className="w-4/12">
+                            <SelectLabel
+                                id="state_uf"
+                                label="Estado"
+                                options={statesOptions}
+                                value={payload.state_uf}
+                                setState={setPayloadSafe}
+                                className="uppercase"
+                                floating={false}
+                                errorExternal={localErrors.state_uf}
+                                ref={(el: any) => (refs.current.state_uf = el)}
+                            />
+                        </div>
                         <div className="w-8/12">
                             <SelectLabel
                                 id="city_name"
                                 label="Cidade"
-                                options={citiesOptions(payload.state)}
+                                options={citiesOptions(payload.state_uf)}
                                 value={payload.city_name}
                                 setState={setPayloadSafe}
                                 className="uppercase"
                                 floating={false}
                                 errorExternal={localErrors.city_name}
-                                ref={(el: any) => (refs.current['city_name'] = el)}
-                            />
-                        </div>
-                        <div className="w-4/12">
-                            <SelectLabel
-                                id="state"
-                                label="Estado"
-                                options={statesOptions}
-                                value={payload.state}
-                                setState={setPayloadSafe}
-                                className="uppercase"
-                                floating={false}
-                                errorExternal={localErrors.state}
-                                ref={(el: any) => (refs.current['state'] = el)}
+                                ref={(el: any) => (refs.current.city_name = el)}
                             />
                         </div>
                     </div>
@@ -265,7 +297,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                             Salvar endereço
                         </Button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     );
