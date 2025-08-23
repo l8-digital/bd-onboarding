@@ -35,7 +35,7 @@ export interface MemberNode {
 type RowProps = {
     member: MemberNode;
     onEdit: (member: MemberNode) => void;
-    onAddParticipant: (parentId: string) => void;
+    onAddParticipant: (parentId: string, level: number) => void;
 };
 
 const formatPct = (p?: string | number) => {
@@ -75,13 +75,13 @@ function MemberRow({member, onEdit, onAddParticipant}: RowProps) {
                     iconOnly
                 />
 
-                {member.level === 1 && (
+                {(member.level === 1 || member.level === 2) && (
                     <Button
                         type="button"
                         color="gray"
                         size="sm"
                         iconLeft={<PlusIcon className="w-4 h-4 stroke-black"/>}
-                        onClick={() => onAddParticipant(member.id)}
+                        onClick={() => onAddParticipant(member.id, member.level)}
                     >
                         Participante
                     </Button>
@@ -94,7 +94,7 @@ function MemberRow({member, onEdit, onAddParticipant}: RowProps) {
 type TreeProps = {
     members: MemberNode[];
     onEdit: (member: MemberNode) => void;
-    onAddParticipant: (parentId: string) => void;
+    onAddParticipant: (parentId: string, level: number) => void;
 };
 
 export default function MemberTree({members, onEdit, onAddParticipant}: TreeProps) {
