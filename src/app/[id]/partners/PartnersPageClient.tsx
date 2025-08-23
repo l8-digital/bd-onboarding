@@ -17,11 +17,50 @@ function replaceMemberNode(tree: MemberNode[], updated: MemberNode): MemberNode[
     });
 }
 
+function appendSiblingAtLevel(
+    tree: MemberNode[],
+    siblingOfId: string | null,
+    _level: number,
+    newNode: MemberNode
+): MemberNode[] {
+    if (!siblingOfId) {
+        return [...tree, newNode];
+    }
+
+    const walk = (nodes: MemberNode[]): [MemberNode[], boolean] => {
+        const idx = nodes.findIndex((n) => n.id === siblingOfId);
+        if (idx !== -1) {
+            const copy = [...nodes];
+            copy.splice(idx + 1, 0, newNode);
+            return [copy, true];
+        }
+
+        let inserted = false;
+        const next = nodes.map((n) => {
+            if (!inserted && n.members?.length) {
+                const [children, done] = walk(n.members);
+                if (done) {
+                    inserted = true;
+                    return { ...n, members: children };
+                }
+            }
+            return n;
+        });
+        return [next, inserted];
+    };
+
+    const [result, done] = walk(tree);
+    if (done) return result;
+    return [...tree, newNode];
+}
+
 export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) {
     const [openParticipant, setOpenParticipant] = React.useState(false);
     const [editingMember, setEditingMember] = React.useState<MemberNode | null>(null);
     const [modalMode, setModalMode] = React.useState<'create' | 'edit'>('create');
     const [errors, setErrors] = React.useState<Record<string, string>>({});
+    const [targetLevel, setTargetLevel] = useState<number | null>(null);
+    const [targetParentId, setTargetParentId] = useState<string | null>(null);
 
     const client = useMemo<Client>(() => ({
         document: link?.client?.document ?? '',
@@ -99,12 +138,16 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
     const handleEdit = (member: MemberNode) => {
         setEditingMember(member);
         setModalMode('edit');
+        setTargetLevel(null);
+        setTargetParentId(null);
         setOpenParticipant(true);
     };
 
-    const handleAdd = (parentId: string) => {
+    const handleAdd = (parentId: string, level: number) => {
         setEditingMember(null);
         setModalMode('create');
+        setTargetLevel(level);
+        setTargetParentId(parentId);
         setOpenParticipant(true);
     };
 
@@ -153,7 +196,7 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
                                         color="gray"
                                         size="sm"
                                         iconLeft={<PlusIcon className="w-4 h-4 stroke-black" />}
-                                        onClick={() => setOpenParticipant(true)}
+                                        onClick={() => handleAdd(client.id, 1)}
                                     >
                                         Participante
                                     </Button>
@@ -254,16 +297,26 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
                 clientId={client?.id}
                 initialData={editingMember ?? undefined}
                 lockType={modalMode === 'edit'}
+                targetLevel={targetLevel ?? 1}
+                parentBusinessId={targetParentId ?? undefined}
                 onClose={() => {
                     setOpenParticipant(false);
                     setEditingMember(null);
                     setModalMode('create');
+                    setTargetLevel(null);
+                    setTargetParentId(null);
                 }}
                 onSaved={(updated) => {
-                    setMembers(prev => replaceMemberNode(prev, updated));
+                    setMembers(prev =>
+                        modalMode === 'edit'
+                            ? replaceMemberNode(prev, updated)
+                            : appendSiblingAtLevel(prev, targetParentId, targetLevel ?? 1, updated)
+                    );
                     setOpenParticipant(false);
                     setEditingMember(null);
                     setModalMode('create');
+                    setTargetLevel(null);
+                    setTargetParentId(null);
                 }}
             />
         </main>

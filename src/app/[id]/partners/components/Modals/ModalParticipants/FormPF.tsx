@@ -73,9 +73,11 @@ type FormPFProps = {
     initialValues?: any;         // pode conter id
     readOnlyType?: boolean;
     onSaved?: (saved: MemberNode) => void; // pai atualiza/fecha se quiser
+    level?: number;
+    parentBusinessId?: string;
 };
 
-export default function FormPF({ clientId, initialValues, readOnlyType: _readOnlyType, onSaved }: FormPFProps) {
+export default function FormPF({ clientId, initialValues, readOnlyType: _readOnlyType, onSaved, level, parentBusinessId }: FormPFProps) {
 
     const [payload, setPayload] = React.useState({
         id: initialValues?.id ?? '',
@@ -91,14 +93,17 @@ export default function FormPF({ clientId, initialValues, readOnlyType: _readOnl
     const [errors, setErrors] = React.useState<Record<string, string>>({});
     const [loading, setLoading] = React.useState(false);
 
+    const resolvedLevel = level ?? 1;
+    const resolvedParent = parentBusinessId ?? null;
+
     const buildMemberNode = (values: any): MemberNode => ({
         id: values.id || '',
-        level: 1,
+        level: resolvedLevel,
         member_type: 'PERSON',
         associate: false,
         details: { id: '', name: values.name, document: values.document },
         participation_percentage: values.percentage,
-        parent_business_id: null,
+        parent_business_id: resolvedParent,
         required_documents: [],
         submitted_documents: [],
         type: values.representative ? 'LEGAL_REPRESENTATIVE' : null,
@@ -123,6 +128,8 @@ export default function FormPF({ clientId, initialValues, readOnlyType: _readOnl
                     details: { name: values.name, document: values.document },
                     participation_percentage: values.percentage,
                     type: values.representative ? 'LEGAL_REPRESENTATIVE' : null,
+                    level: resolvedLevel,
+                    parent_business_id: resolvedParent,
                     // inclua addresses se o backend espera aqui:
                     addresses: values.addresses,
                     occupation: values.occupation,
@@ -145,7 +152,7 @@ export default function FormPF({ clientId, initialValues, readOnlyType: _readOnl
              //   await api.post(`${authApi}/v1/client/members/${clientId}`, upsertPayload);
             }
             // notifica o pai com um MemberNode (útil para atualizar a lista)
-            // onSaved?.(buildMemberNode(values));
+            onSaved?.(buildMemberNode(values));
             setLoading(false);
         } catch (err: any) {
             setLoading(false);

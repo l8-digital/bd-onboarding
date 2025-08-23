@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import {ArrowLeftIcon, BuildingOffice2Icon, UserIcon} from '@heroicons/react/24/outline';
+import {ArrowLeftIcon} from '@heroicons/react/24/outline';
 import FormPF from './FormPF';
 import FormPJ from './FormPJ';
 import {MemberNode} from '@/types/Members';
@@ -15,6 +15,8 @@ export type ModalPaticipantsProps = {
   onClose: () => void;
   onSaved?: (saved: MemberNode) => void;
   clientId: string; // <- adicione isso
+  targetLevel: number;
+  parentBusinessId?: string;
 };
 
 function mapMemberToPF(data?: Partial<MemberNode>) {
@@ -44,13 +46,15 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
                                                              onClose,
                                                              onSaved,
                                                              clientId,
+                                                             targetLevel,
+                                                             parentBusinessId,
                                                            }) => {
   const activeType: 'PERSON' | 'BUSINESS' = (initialData?.member_type as any) ?? 'PERSON';
   const [activeTab, setActiveTab] = React.useState<'PERSON' | 'BUSINESS'>(activeType);
 
   const onTabClick = (tab: 'PERSON' | 'BUSINESS') => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    if (lockType) return;
+    if (lockType || mode === 'edit') return;
     setActiveTab(tab);
   };
 
@@ -89,9 +93,28 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
             <div className="w-full max-w-xl mx-auto">
               {mode === 'create' && (
                   <>
+                    <div className="flex items-center justify-center gap-2 pt-4 pb-6">
+                      <a
+                          href="#"
+                          onClick={onTabClick('PERSON')}
+                          className={`px-3 py-1.5 rounded-full text-sm ${isActive('PERSON') ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-700'}`}
+                      >
+                        Pessoa Física
+                      </a>
+                      <a
+                          href="#"
+                          onClick={onTabClick('BUSINESS')}
+                          className={`px-3 py-1.5 rounded-full text-sm ${isActive('BUSINESS') ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-700'}`}
+                      >
+                        Pessoa Jurídica
+                      </a>
+                    </div>
+
                     <div className={isActive('PERSON') ? '' : 'hidden'}>
                       <FormPF
                           clientId={clientId}
+                          level={targetLevel}
+                          parentBusinessId={parentBusinessId}
                           initialValues={undefined}
                           onSaved={handleSavedFromChild} // <- o filho chama quando terminar
                       />
@@ -99,6 +122,8 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
                     <div className={isActive('BUSINESS') ? '' : 'hidden'}>
                       <FormPJ
                           clientId={clientId}
+                          level={targetLevel}
+                          parentBusinessId={parentBusinessId}
                           initialValues={undefined}
                           onSaved={handleSavedFromChild}
                       />
@@ -109,6 +134,8 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
               {mode === 'edit' && activeType === 'PERSON' && (
                   <FormPF
                       clientId={clientId}
+                      level={initialData?.level}
+                      parentBusinessId={initialData?.parent_business_id ?? undefined}
                       initialValues={mapMemberToPF(initialData)}
                       readOnlyType
                       onSaved={handleSavedFromChild}
@@ -118,6 +145,8 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
               {mode === 'edit' && activeType === 'BUSINESS' && (
                   <FormPJ
                       clientId={clientId}
+                      level={initialData?.level}
+                      parentBusinessId={initialData?.parent_business_id ?? undefined}
                       initialValues={mapMemberToPJ(initialData)}
                       readOnlyType
                       onSaved={handleSavedFromChild}
