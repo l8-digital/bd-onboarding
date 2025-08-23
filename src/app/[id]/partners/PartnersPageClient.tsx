@@ -28,6 +28,7 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
         email:    link?.client?.email    ?? '',
         name:     link?.client?.name     ?? '',
         phone:    link?.client?.phone    ?? '',
+        id:    link?.client?.id    ?? '',
     }), [link]);
 
     const [members, setMembers] = React.useState<MemberNode[]>(() => link?.members ?? []);
@@ -38,7 +39,6 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
     );
 
     const LegalRepresentative = hasLegalRepresentative(members);        // members: MemberNode[]
-
 
 
     const [payload, setPayload] = useState({
@@ -251,6 +251,7 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
             <ModalPaticipants
                 open={openParticipant}
                 mode={modalMode}
+                clientId={client?.id}
                 initialData={editingMember ?? undefined}
                 lockType={modalMode === 'edit'}
                 onClose={() => {

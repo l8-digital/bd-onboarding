@@ -12,7 +12,7 @@ interface LayoutProps {
 export default async function OnboardingLayout({ children, params }: LayoutProps) {
     const link: OnboardingLinkApi = await getOnboardingLink(params.id);
 
-    console.log(link);
+
 
     return (
         <>
