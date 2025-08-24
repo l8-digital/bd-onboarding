@@ -13,9 +13,10 @@ export type ModalPaticipantsProps = {
   lockType?: boolean;
   onClose: () => void;
   onSaved?: (saved: MemberNode) => void;
-  clientId: string; // <- adicione isso
+  clientId: string;
   targetLevel: number;
   parentBusinessId?: string;
+  maxAllowedPercentage: number;
 };
 
 const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
@@ -28,6 +29,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
   clientId,
   targetLevel,
   parentBusinessId,
+  maxAllowedPercentage,
 }) => {
   const handleSavedFromChild = (saved: MemberNode) => {
     onSaved?.(saved);
@@ -79,6 +81,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
                 parentBusinessId={parentBusinessId}
                 mode="create"
                 readOnlyType={lockType}
+                maxAllowedPercentage={maxAllowedPercentage}
                 onSaved={handleSavedFromChild}
               />
             )}
@@ -91,6 +94,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
                 mode="edit"
                 readOnlyType
                 initialValues={initialValues}
+                maxAllowedPercentage={maxAllowedPercentage}
                 onSaved={handleSavedFromChild}
               />
             )}
