@@ -25,8 +25,8 @@ const StepNav: React.FC = () => {
         <header className="md:fixed top-0 left-0 bg-white w-full pt-8 md:pt-5 pb-3 z-[20]">
             <div className="md:px-8 flex flex-col items-center md:flex-row md:items-end gap-6 md:gap-0">
                 <div className="w-full md:w-3/12">
-                    <div className="w-32 mx-auto md:mx-0">
-                        <Image src="/bd-logo.svg" alt="BD Logo" width={128} height={40} priority/>
+                    <div className="w-28 mx-auto md:mx-0">
+                        <Image src="/bd-logo.svg" alt="BD Logo" width={128} height={35} priority/>
                     </div>
                 </div>
 
@@ -44,8 +44,8 @@ const StepNav: React.FC = () => {
                                         index === currentIndex ? 'text-blue-600 font-semibold' : 'text-gray-500'
                                     }`}
                                 >
-                  {step.label}
-                </span>
+                                  {step.label}
+                                </span>
                             </li>
                         ))}
                     </ul>

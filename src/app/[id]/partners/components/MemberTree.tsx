@@ -75,7 +75,7 @@ function MemberRow({member, onEdit, onAddParticipant}: RowProps) {
                     iconOnly
                 />
 
-                {(member.level === 1 || member.level === 2) && (
+                {(member.level === 1) && (
                     <Button
                         type="button"
                         color="gray"
