@@ -64,7 +64,9 @@ const occupationValues =
         : [];
 
 // ---------- Schema dinâmico
-function getSchema(type: 'PERSON' | 'BUSINESS') {
+function getSchema(type: 'PERSON' | 'BUSINESS', maxAllowed: number) {
+    const msg = `Você só pode preencher até ${maxAllowed.toFixed(2)}% neste nível.`;
+
     return Yup.object({
         id: Yup.string().optional(),
         name: Yup.string().trim().min(3, 'Nome é obrigatório').required('Nome é obrigatório'),
@@ -75,7 +77,7 @@ function getSchema(type: 'PERSON' | 'BUSINESS') {
             .transform(percentageTransform)
             .typeError('Percentual inválido')
             .min(0, 'Mínimo 0%')
-            .max(100, 'Máximo 100%')
+            .max(maxAllowed, msg)
             .required('Percentual inválido'),
 
         // novos:
@@ -123,6 +125,7 @@ export type FormParticipantProps = {
         phone?: string;
         ddi?: string; // opcional, ex.: '55'
     };
+    maxAllowedPercentage: number; // NOVO
     onSaved: (saved: MemberNode) => void;
 };
 
@@ -133,6 +136,7 @@ export default function FormParticipant({
                                             mode,
                                             readOnlyType,
                                             initialValues,
+                                            maxAllowedPercentage,
                                             onSaved,
                                         }: FormParticipantProps) {
     const [type, setType] = React.useState<'PERSON' | 'BUSINESS'>(initialValues?.member_type ?? 'PERSON');
@@ -187,7 +191,7 @@ export default function FormParticipant({
         setErrors({});
 
         try {
-            const schema = getSchema(type);
+            const schema = getSchema(type, maxAllowedPercentage);
             const values = await schema.validate(payload, {abortEarly: false, stripUnknown: false});
 
             // Normalizações
@@ -380,6 +384,9 @@ export default function FormParticipant({
                 suffix={<span className="font-lg stroke-gray">%</span>}
                 errorExternal={errors.percentage}
             />
+            <p className="text-xs text-neutral mt-1">
+              Disponível neste nível: <span className="font-semibold">{maxAllowedPercentage.toFixed(2)}%</span>
+            </p>
 
             {/* Telefone e e-mail */}
             <div className="flex gap-4 mt-5">
@@ -465,7 +472,7 @@ export default function FormParticipant({
             {errors.__global ? <p className="text-red-600 text-sm mt-3">{errors.__global}</p> : null}
 
             <div className="mt-6">
-                <Button type="submit" color="primary" fullWidth disabled={loading} loading={loading}>
+                <Button type="submit" color="primary" fullWidth disabled={loading || maxAllowedPercentage <= 0} loading={loading}>
                     Salvar Participante
                 </Button>
             </div>

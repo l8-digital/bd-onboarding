@@ -54,6 +54,55 @@ function appendSiblingAtLevel(
     return [...tree, newNode];
 }
 
+function sumAtLevel(
+    tree: MemberNode[],
+    level: number,
+    parentId: string | null | undefined,
+    excludeId?: string | null
+): number {
+    let sum = 0;
+    const stack = [...tree];
+    const norm = (v: any) => (v === undefined || v === null ? null : v);
+
+    while (stack.length) {
+        const n = stack.pop()!;
+        const sameLevel = n.level === level;
+        const sameParent = norm(n.parent_business_id) === norm(parentId);
+        const notExcluded = !excludeId || n.id !== excludeId;
+
+        if (sameLevel && sameParent && notExcluded) {
+            const v = parseFloat(n.participation_percentage || '0');
+            if (Number.isFinite(v)) sum += v;
+        }
+        if (n.members?.length) stack.push(...n.members);
+    }
+    return sum;
+}
+
+function clamp2(n: number) {
+    return Math.max(0, Math.round(n * 100) / 100);
+}
+
+function getMaxForCreate(
+    members: MemberNode[],
+    level: number,
+    parentId: string | null | undefined
+) {
+    const used = sumAtLevel(members, level, parentId, null);
+    return clamp2(100 - used);
+}
+
+function getMaxForEdit(members: MemberNode[], member: MemberNode) {
+    const own = parseFloat(member.participation_percentage || '0') || 0;
+    const usedExOthers = sumAtLevel(
+        members,
+        member.level,
+        member.parent_business_id ?? null,
+        member.id
+    );
+    return clamp2(own + (100 - usedExOthers));
+}
+
 export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) {
     const [openParticipant, setOpenParticipant] = React.useState(false);
     const [editingMember, setEditingMember] = React.useState<MemberNode | null>(null);
@@ -318,6 +367,11 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
                     setTargetLevel(null);
                     setTargetParentId(null);
                 }}
+                maxAllowedPercentage={
+                    modalMode === 'edit' && editingMember
+                        ? getMaxForEdit(members, editingMember)
+                        : getMaxForCreate(members, targetLevel ?? 1, targetParentId ?? null)
+                }
             />
         </main>
     );
