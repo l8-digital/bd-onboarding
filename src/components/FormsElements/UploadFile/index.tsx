@@ -38,6 +38,9 @@ interface UploadFileProps {
     showPreview?: boolean;                  // default: true
     valueMode?: 'path' | 'file';            // NOVO (default: 'path')
     autoUpload?: boolean;                   // NOVO (default: true)
+    clientId: string;                       // NOVO: vira client_id no FormData
+    documentTypeId: string;                 // NOVO: vira document_type_id
+    ownerDocument: string;                  // NOVO: vira owner_document
     onUploaded?: (meta: { path: string; id?: string; name?: string; mime?: string; size?: number }) => void;
     onUploadError?: (message: string) => void;
 }
@@ -60,6 +63,9 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
             showPreview = true,
             valueMode = 'path',
             autoUpload = true,
+            clientId,
+            documentTypeId,
+            ownerDocument,
             onUploaded,
             onUploadError,
         },
@@ -141,7 +147,17 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
 
             try {
                 if (auto && wantsPath) {
-                    const res = await upload(f);       // chama o endpoint
+                    if (!clientId || !documentTypeId || !ownerDocument) {
+                        const msg = 'Metadados do upload incompletos: clientId, documentTypeId e ownerDocument são obrigatórios.';
+                        setError(msg);
+                        setUploadError(msg);
+                        return;
+                    }
+                    const res = await upload(f, {
+                        client_id: clientId,
+                        document_type_id: documentTypeId,
+                        owner_document: ownerDocument,
+                    });
                     if (!res?.path) {
                         throw new Error('Upload concluído, mas sem path retornado.');
                     }

@@ -484,6 +484,9 @@ export default function FormParticipant({
                 setState={setPayload}          // o próprio componente faz: { ...prev, [id]: file }
                 errorExternal={undefined}
                 required
+                clientId={clientId}
+                documentTypeId=""
+                ownerDocument={payload.document || ''}
             />
 
             {errors.__global ? <p className="text-red-600 text-sm mt-3">{errors.__global}</p> : null}
