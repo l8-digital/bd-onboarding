@@ -38,9 +38,7 @@ const percentageTransform = (_value: any, originalValue: any) => {
   return originalValue;
 };
 
-function getSchema(type: 'PERSON' | 'BUSINESS', maxAllowed: number) {
-  const msg = `Você só pode preencher até ${maxAllowed.toFixed(2)}% neste nível.`;
-
+function getSchema(type: 'PERSON' | 'BUSINESS') {
   return Yup.object({
     id: Yup.string().optional(),
     name: Yup.string().trim().min(3, 'Nome é obrigatório').required('Nome é obrigatório'),
@@ -50,8 +48,8 @@ function getSchema(type: 'PERSON' | 'BUSINESS', maxAllowed: number) {
     percentage: Yup.number()
       .transform(percentageTransform)
       .typeError('Percentual inválido')
-      .min(0, 'Mínimo 0%')
-      .max(maxAllowed, msg)
+      .min(0)
+      .max(100)
       .required('Percentual inválido'),
     representative: Yup.boolean().optional(),
   });
@@ -73,7 +71,6 @@ export type FormParticipantProps = {
     level?: number;
     parent_business_id?: string | null;
   };
-  maxAllowedPercentage: number;
   onSaved: (saved: MemberNode) => void;
 };
 
@@ -84,7 +81,6 @@ export default function FormParticipant({
   mode,
   readOnlyType,
   initialValues,
-  maxAllowedPercentage,
   onSaved,
 }: FormParticipantProps) {
   const [type, setType] = React.useState<'PERSON' | 'BUSINESS'>(initialValues?.member_type ?? 'PERSON');
@@ -122,7 +118,7 @@ export default function FormParticipant({
     setErrors({});
 
     try {
-      const schema = getSchema(type, maxAllowedPercentage);
+      const schema = getSchema(type);
       const values = await schema.validate(payload, { abortEarly: false, stripUnknown: false });
 
       const upsertPayload = {
@@ -224,22 +220,17 @@ export default function FormParticipant({
           placeholder={type === 'PERSON' ? '000.000.000-00' : '00.000.000/0000-00'}
           floating={false}
         />
-        <div>
-          <Input
-            id="percentage"
-            label="Participação (%)"
-            value={payload.percentage}
-            setState={(updater: any) =>
-              setPayload((prev: any) => (typeof updater === 'function' ? updater(prev) : { ...prev, percentage: updater }))
-            }
-            maskType="percentage"
-            placeholder="0,00%"
-            floating={false}
-          />
-          <p className="text-xs text-neutral mt-1">
-            Disponível neste nível: <span className="font-semibold">{maxAllowedPercentage.toFixed(2)}%</span>
-          </p>
-        </div>
+        <Input
+          id="percentage"
+          label="Participação (%)"
+          value={payload.percentage}
+          setState={(updater: any) =>
+            setPayload((prev: any) => (typeof updater === 'function' ? updater(prev) : { ...prev, percentage: updater }))
+          }
+          maskType="percentage"
+          placeholder="0,00%"
+          floating={false}
+        />
         {type === 'PERSON' && (
           <CheckboxLabel
             id="representative"
@@ -253,7 +244,7 @@ export default function FormParticipant({
       {errors.__global && <p className="text-red text-sm mt-4">{errors.__global}</p>}
 
       <div className="mt-6">
-        <Button type="submit" color="primary" fullWidth disabled={loading || maxAllowedPercentage <= 0}>
+        <Button type="submit" color="primary" fullWidth disabled={loading}>
           {loading ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>
