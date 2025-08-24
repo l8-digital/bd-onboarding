@@ -18,6 +18,8 @@ import api from '@/lib/axios';
 import {authApi} from '@/lib/urlApi';
 import {MemberNode} from '@/types/Members';
 import {AlertMessage} from "@/components/AlertMessage";
+import {UploadFile, UploadFileHandle} from "@/components/FormsElements/UploadFile";
+import {useRef} from "react";
 
 // ---------- Utils
 const onlyDigits = (v: string) => (v || '').replace(/\D/g, '');
@@ -140,6 +142,7 @@ export default function FormParticipant({
                                             onSaved,
                                         }: FormParticipantProps) {
     const [type, setType] = React.useState<'PERSON' | 'BUSINESS'>(initialValues?.member_type ?? 'PERSON');
+    const uploadRef = useRef<UploadFileHandle>(null);
 
     const [payload, setPayload] = React.useState({
         id: initialValues?.id ?? '',
@@ -153,6 +156,7 @@ export default function FormParticipant({
         // novos
         email: initialValues?.email ?? '',
         phone: initialValues?.phone ?? '',
+        frente_doc: '',
         ddi: initialValues?.ddi ?? '55',
     });
 
@@ -468,6 +472,19 @@ export default function FormParticipant({
                     <AlertMessage message={errors.addresses} type="error" className="relative" />
                 </>
             )}
+
+            <UploadFile
+                ref={uploadRef}
+                id="frente_doc"
+                label="Documento (frente)"
+                hint="JPG, PNG ou PDF — até 5MB"
+                accept="image/*,application/pdf"
+                maxSizeMB={5}
+                value={payload.frente_doc}     // controlado
+                setState={setPayload}          // o próprio componente faz: { ...prev, [id]: file }
+                errorExternal={undefined}
+                required
+            />
 
             {errors.__global ? <p className="text-red-600 text-sm mt-3">{errors.__global}</p> : null}
 
