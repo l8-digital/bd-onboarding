@@ -18,8 +18,7 @@ import api from '@/lib/axios';
 import {authApi} from '@/lib/urlApi';
 import {MemberNode} from '@/types/Members';
 import {AlertMessage} from "@/components/AlertMessage";
-import {UploadFile, UploadFileHandle} from "@/components/FormsElements/UploadFile";
-import {useRef} from "react";
+import {UploadFile} from "@/components/FormsElements/UploadFile";
 
 // ---------- Utils
 const onlyDigits = (v: string) => (v || '').replace(/\D/g, '');
@@ -126,9 +125,14 @@ export type FormParticipantProps = {
         email?: string;
         phone?: string;
         ddi?: string; // opcional, ex.: '55'
+        submitted_documents?: any[];
     };
     maxAllowedPercentage: number; // NOVO
     onSaved: (saved: MemberNode) => void;
+    requiredDocuments?: {
+        business?: Record<string, Array<{ id: string }>>;
+        person?: Record<string, Array<{ id: string }>>;
+    };
 };
 
 export default function FormParticipant({
@@ -140,9 +144,9 @@ export default function FormParticipant({
                                             initialValues,
                                             maxAllowedPercentage,
                                             onSaved,
+                                            requiredDocuments,
                                         }: FormParticipantProps) {
     const [type, setType] = React.useState<'PERSON' | 'BUSINESS'>(initialValues?.member_type ?? 'PERSON');
-    const uploadRef = useRef<UploadFileHandle>(null);
 
     const [payload, setPayload] = React.useState({
         id: initialValues?.id ?? '',
@@ -156,9 +160,9 @@ export default function FormParticipant({
         // novos
         email: initialValues?.email ?? '',
         phone: initialValues?.phone ?? '',
-        frente_doc: '',
         ddi: initialValues?.ddi ?? '55',
     });
+    const [documents, setDocuments] = React.useState<Record<string, string | null>>({});
 
     const [errors, setErrors] = React.useState<Record<string, string>>({});
     const [loading, setLoading] = React.useState(false);
@@ -175,19 +179,13 @@ export default function FormParticipant({
     // opções mínimas de DDI (mantém desabilitado conforme seu snippet)
     const ddiOptions = React.useMemo(() => [{label: '+55', value: '55'}], []);
 
-    const buildMemberNode = (values: any): MemberNode => ({
-        id: values.id || '',
-        level: resolvedLevel,
-        member_type: type,
-        associate: false,
-        details: {id: '', name: values.name, document: values.document},
-        participation_percentage: values.percentage,
-        parent_business_id: resolvedParent,
-        required_documents: [],
-        submitted_documents: [],
-        type: type === 'PERSON' && values.representative ? 'LEGAL_REPRESENTATIVE' : null,
-        members: [],
-    });
+    React.useEffect(() => {
+        const map: Record<string, string> = {};
+        (initialValues as any)?.submitted_documents?.forEach?.((d: any) => {
+            if (d?.id && d?.path) map[d.id] = d.path;
+        });
+        if (Object.keys(map).length) setDocuments(map);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -223,15 +221,13 @@ export default function FormParticipant({
             fd.append('email', values.email);
             fd.append('participation_percentage', perc);
             fd.append('associate', associate);
-
-            // Opcional: anexar documentos se existirem em payload.documents = [{id, path}, ...]
-            // (adicione payload.documents ao seu estado caso ainda não tenha)
-            // if (Array.isArray((payload as any).documents)) {
-            //   (payload as any).documents.forEach((d: any, i: number) => {
-            //     if (d?.id)   fd.append(`documents[${i}][id]`, String(d.id));
-            //     if (d?.path) fd.append(`documents[${i}][path]`, String(d.path));
-            //   });
-            // }
+            const docsArray = Object.entries(documents)
+                .filter(([, path]) => !!path)
+                .map(([id, path]) => ({ id, path: path as string }));
+            docsArray.forEach((d, i) => {
+                fd.append(`documents[${i}][id]`, d.id);
+                fd.append(`documents[${i}][path]`, d.path);
+            });
 
             // Chamada — o endpoint que você já usa, agora com body achatado:
             if (mode === 'edit') {
@@ -252,7 +248,7 @@ export default function FormParticipant({
                     participation_percentage: perc,
                     parent_business_id: parentBusinessId ?? null,
                     required_documents: [],
-                    submitted_documents: [],
+                    submitted_documents: docsArray,
                     type: type === 'PERSON' && values.representative ? 'LEGAL_REPRESENTATIVE' : null,
                     members: [],
                 } as MemberNode
@@ -473,21 +469,47 @@ export default function FormParticipant({
                 </>
             )}
 
-            <UploadFile
-                ref={uploadRef}
-                id="frente_doc"
-                label="Documento (frente)"
-                hint="JPG, PNG ou PDF — até 5MB"
-                accept="image/*,application/pdf"
-                maxSizeMB={5}
-                value={payload.frente_doc}     // controlado
-                setState={setPayload}          // o próprio componente faz: { ...prev, [id]: file }
-                errorExternal={undefined}
-                required
-                clientId={clientId}
-                documentTypeId=""
-                ownerDocument={payload.document || ''}
-            />
+            {/* Documentos dinâmicos */}
+            {(() => {
+                const pretty = (k: string) => ({ cnh: 'CNH', rg: 'RG', qsa: 'QSA' }[k] || k.toUpperCase());
+                const groups = type === 'PERSON'
+                    ? requiredDocuments?.person || {}
+                    : requiredDocuments?.business || {};
+                return Object.entries(groups).map(([groupKey, arr]) => (
+                    <div key={groupKey} className="mt-6">
+                        <h3 className="text-neutral font-semibold mb-2">{pretty(groupKey)}</h3>
+                        <div className="grid gap-3">
+                            {arr?.map?.((doc: any) => (
+                                <UploadFile
+                                    key={doc.id}
+                                    id={`doc_${doc.id}`}
+                                    label={`${pretty(groupKey)} - arquivo`}
+                                    hint="JPG, PNG ou PDF — até 10MB"
+                                    accept="image/*,application/pdf"
+                                    maxSizeMB={10}
+                                    value={documents[doc.id] ?? null}
+                                    setState={(updater: any) => {
+                                        const nextVal = typeof updater === 'function'
+                                            ? updater({})?.[`doc_${doc.id}`]
+                                            : updater?.[`doc_${doc.id}`];
+                                        setDocuments(prev => ({ ...prev, [doc.id]: nextVal ?? null }));
+                                    }}
+                                    required
+                                    valueMode="path"
+                                    autoUpload
+                                    clientId={clientId}
+                                    documentTypeId={doc.id}
+                                    ownerDocument={onlyDigits(payload.document)}
+                                    disabled={!onlyDigits(payload.document)}
+                                    onUploaded={(meta) => {
+                                        setDocuments(prev => ({ ...prev, [doc.id]: meta.path }));
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ));
+            })()}
 
             {errors.__global ? <p className="text-red-600 text-sm mt-3">{errors.__global}</p> : null}
 

@@ -348,6 +348,7 @@ export default function PartnersPageClient({link}: { link: OnboardingLinkApi }) 
                 lockType={modalMode === 'edit'}
                 targetLevel={targetLevel ?? 1}
                 parentBusinessId={targetParentId ?? undefined}
+                requiredDocuments={(link as any)?.required_documents}
                 onClose={() => {
                     setOpenParticipant(false);
                     setEditingMember(null);
