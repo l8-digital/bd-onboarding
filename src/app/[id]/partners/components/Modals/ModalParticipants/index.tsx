@@ -17,6 +17,10 @@ export type ModalPaticipantsProps = {
   targetLevel: number;
   parentBusinessId?: string;
   maxAllowedPercentage: number; // NOVO
+  requiredDocuments?: {
+    business?: Record<string, Array<{ id: string }>>;
+    person?: Record<string, Array<{ id: string }>>;
+  };
 };
 
 const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
@@ -30,6 +34,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
   targetLevel,
   parentBusinessId,
   maxAllowedPercentage,
+  requiredDocuments,
 }) => {
   const handleSavedFromChild = (saved: MemberNode) => {
     onSaved?.(saved);
@@ -48,6 +53,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
         member_type: initialData.member_type as 'PERSON' | 'BUSINESS',
         level: initialData.level,
         parent_business_id: initialData.parent_business_id ?? null,
+        submitted_documents: initialData.submitted_documents ?? [],
       }
     : undefined;
 
@@ -82,6 +88,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
                 mode="create"
                 readOnlyType={lockType}
                 maxAllowedPercentage={maxAllowedPercentage}
+                requiredDocuments={requiredDocuments}
                 onSaved={handleSavedFromChild}
               />
             )}
@@ -95,6 +102,7 @@ const ModalPaticipants: React.FC<ModalPaticipantsProps> = ({
                 readOnlyType
                 initialValues={initialValues}
                 maxAllowedPercentage={maxAllowedPercentage}
+                requiredDocuments={requiredDocuments}
                 onSaved={handleSavedFromChild}
               />
             )}
