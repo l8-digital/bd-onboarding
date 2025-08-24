@@ -11,10 +11,10 @@ import styles from './../style.module.scss';
 import { AlertMessage } from '../../AlertMessage';
 import {
     PaperClipIcon,
-    PhotoIcon,
     DocumentTextIcon,
     TrashIcon,
 } from '@heroicons/react/24/outline';
+import { useUploadDocument } from '@/hooks/useUploadDocument';
 
 export interface UploadFileHandle {
     open: () => void;
@@ -27,15 +27,19 @@ interface UploadFileProps {
     label: string;
     hint?: string;                          // ex.: "JPG ou PNG" / "Arquivo PDF"
     accept?: string;                        // ex.: "image/*" | "application/pdf"
-    value?: File | null;                    // controlado (opcional)
+    value?: string | File | null;           // agora aceita path também
     setState?: (updater: any) => void;      // mesmo padrão dos seus inputs
-    modifyStateExternal?: (id: string, file: File | null) => void;
+    modifyStateExternal?: (id: string, value: string | File | null) => void;
     required?: boolean;
     disabled?: boolean;
     errorExternal?: string;
     className?: string;
     maxSizeMB?: number;                     // validação simples (opcional)
     showPreview?: boolean;                  // default: true
+    valueMode?: 'path' | 'file';            // NOVO (default: 'path')
+    autoUpload?: boolean;                   // NOVO (default: true)
+    onUploaded?: (meta: { path: string; id?: string; name?: string; mime?: string; size?: number }) => void;
+    onUploadError?: (message: string) => void;
 }
 
 export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
@@ -54,13 +58,25 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
             className = '',
             maxSizeMB,
             showPreview = true,
+            valueMode = 'path',
+            autoUpload = true,
+            onUploaded,
+            onUploadError,
         },
         ref
     ) => {
         const inputRef = useRef<HTMLInputElement | null>(null);
-        const [file, setFile] = useState<File | null>(value);
+        const [file, setFile] = useState<File | null>(value instanceof File ? value : null);
         const [preview, setPreview] = useState<string | null>(null);
         const [error, setError] = useState<string | undefined>(errorExternal);
+
+        const {
+            upload,
+            uploading,
+            progress,
+            error: uploadError,
+            setError: setUploadError,
+        } = useUploadDocument();
 
         useImperativeHandle(ref, () => ({
             open: () => inputRef.current?.click(),
@@ -70,7 +86,11 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
 
         // sync externo -> interno
         useEffect(() => {
-            setFile(value ?? null);
+            if (value instanceof File) {
+                setFile(value);
+            } else if (value === null) {
+                setFile(null);
+            }
         }, [value]);
 
         // sync erro externo
@@ -88,7 +108,7 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
             setPreview(null);
         }, [file, showPreview]);
 
-        function pushToParent(next: File | null) {
+        function pushToParent(next: string | File | null) {
             if (modifyStateExternal) {
                 modifyStateExternal(id, next);
             } else if (setState) {
@@ -102,7 +122,7 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
             inputRef.current?.click();
         }
 
-        function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+        async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
             const f = e.target.files?.[0] ?? null;
             if (!f) return;
 
@@ -113,13 +133,37 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
             }
 
             setError(undefined);
+            setUploadError(null);
             setFile(f);
-            pushToParent(f);
+
+            const wantsPath = valueMode === 'path';
+            const auto = autoUpload;
+
+            try {
+                if (auto && wantsPath) {
+                    const res = await upload(f);       // chama o endpoint
+                    if (!res?.path) {
+                        throw new Error('Upload concluído, mas sem path retornado.');
+                    }
+                    // devolve o path ao pai
+                    pushToParent(res.path);
+                    onUploaded?.(res);
+                } else {
+                    // comportamento antigo
+                    pushToParent(f);
+                }
+            } catch (err: any) {
+                const msg = err?.response?.data?.message || err?.message || 'Falha no upload.';
+                setError(msg);
+                setUploadError(msg);
+                onUploadError?.(msg);
+            }
         }
 
         function handleClear() {
             setFile(null);
             setError(undefined);
+            setUploadError(null);
             if (inputRef.current) inputRef.current.value = '';
             pushToParent(null);
         }
@@ -186,6 +230,9 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
                                 Anexar
                             </button>
                         )}
+                        {uploading && (
+                            <span className="text-xs text-neutral/60">{progress}%</span>
+                        )}
                     </div>
                 </div>
 
@@ -201,7 +248,7 @@ export const UploadFile = forwardRef<UploadFileHandle, UploadFileProps>(
                 />
 
                 {/* erro */}
-                {error && <AlertMessage message={error} type="error" />}
+                {(error || uploadError) && <AlertMessage message={(error || uploadError)!} type="error" />}
             </div>
         );
     }
